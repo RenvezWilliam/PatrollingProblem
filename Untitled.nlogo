@@ -1,80 +1,261 @@
-globals [   ]
-patches-own[etat nb]
+globals []
+patches-own [etat pheromone idle MaxIdle]
+turtles-own [northP southP eastP westP]
+
 to setup
+  ;; Changement de l'environnement
+  resize-world -9 10 -9 10
+  set-patch-size 30
+  import-pcolors "musé.png"
 
-  clear-all
+  ;; Application de l'état de l'environnement (0 pour libre et 1 pour obstacle)
+  ask patches[
+    ifelse (pcolor = white)
+    [set etat 0
+    set pheromone 0
+    set idle 0
+    ]
+    [set etat 1
+    set pheromone 1000]
 
-  ask patches [
-    set etat random 2
-    ifelse (etat = 0)
-    [set pcolor black]
-    [set pcolor white]
+  ]
 
-    set nb_min_alive 2
-    set nb_max_alive 3
+  ;; Création des agents
+  clear-turtles
+  create-turtles NB_Agent [
+    set color blue
+    set size 1
+    set shape "person"
+    ;;setxy 8 -8
+    move-to one-of patches
 
-    set nb_min_spawn 3
-    set nb_max_spawn 3
- ]
+    while [pcolor = black]
+    [
+      uphill-pheromone
+      forward 1
+    ]
+    set heading 0
+  ]
+end
 
+to go_evap
+  ask turtles[
+      set pheromone 100
+      uphill-pheromone
+      forward 1
+    ]
+
+  ;; Fonctionnement des phéromonnes
+  ask patches[
+    if etat = 0 [
+        if pheromone > 0 [
+          set pheromone pheromone - evaporation]
+        set pcolor rgb (255 - (pheromone * 2.5)) 255 (255 - (pheromone * 2.5))
+      ]
+    ]
+end
+
+to go_CLinG
+
+    ask turtles[
+      set idle 0
+      go_to_most_higher
+      forward 1
+    ]
+
+    ask patches[;; on augmente le idle de tout les patches de 1
+     if etat = 0 [
+      set idle idle + 1
+     ]
+    ]
+    ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins
+     if etat = 0 [
+      set MaxIdle idle
+      ask neighbors[
+        if MaxIdle < idle
+        [
+          set MaxIdle idle
+        ]
+      ]
+    ]
+    ]
+  ask patches[;; pur chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins
+    if etat = 0 [
+      set idle MaxIdle
+      set pcolor rgb 255 (255 - idle) (255 - idle)
+    ]
+  ]
 end
 
 to go
+  ;; Déplacement des agents
 
-
-
-  ask patches [
-    set nb count neighbors with [etat = 1]
-  ]
-
-  ask patches [
-
-    if  (not (nb > (nb_min_alive - 1) and nb < (nb_max_alive + 1))) and (etat = 1)[
-    ;if  (not (nb = 2 or nb = 3)) and (etat = 1)[
-      set pcolor black
-      set etat 0
+  ifelse model = "EVAP"
+  [
+    ask turtles[
+      set pheromone 100
+      uphill-pheromone
+      forward 1
     ]
 
-    if  ( (nb > (nb_min_spawn - 1) and nb < (nb_max_spawn + 1))) and (etat = 0)[
-    ;if (nb = 3) and (etat = 0)[
-      set pcolor white
-      set etat 1
+  ;; Fonctionnement des phéromonnes
+  ask patches[
+    if etat = 0 [
+        if pheromone > 0 [
+          set pheromone pheromone - evaporation]
+        set pcolor rgb (255 - (pheromone * 2.5)) 255 (255 - (pheromone * 2.5))
+      ]
     ]
   ]
+  [
+  set idle 0
+    ask turtles[
+      go_to_most_higher
+      forward 1
+    ]
+
+    ask patches[;; on augmente le idle de tout les patches de 1
+      set idle idle + 1
+    ]
+    ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins
+
+      set MaxIdle idle
+      ask neighbors[
+       if MaxIdle < idle
+        [
+          set MaxIdle idle
+        ]
+      ]
+      ask patches[;; pur chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins
+        set idle MaxIdle
+        set pcolor rgb 255 (255 - idle) (255 - idle)
+      ]
+
+    ]
+
+  ]
+end
+
+to uphill-pheromone  ;; turtle procedure
+  let scent-ahead pheromone-scent-at-angle   0
+  let scent-right pheromone-scent-at-angle  90
+  let scent-left  pheromone-scent-at-angle -90
+  let scent-back pheromone-scent-at-angle  180
+
+  let ahead-etat view-wall-at-angle 0
+  let right-etat view-wall-at-angle 90
+  let left-etat view-wall-at-angle -90
+
+
+  ifelse (scent-right < scent-ahead) or (scent-left < scent-ahead)
+  [ ifelse scent-right < scent-left
+    [ if right-etat = 0
+      [ rt 90 ]]
+    [ if left-etat = 0
+      [ lt 90 ]]]
+  [if ahead-etat = 1
+    [ rt 180]]
+
 
 end
 
+to-report pheromone-scent-at-angle [angle]
+  let p patch-right-and-ahead angle 1
+  if p = nobody [ report 0 ]
+  report [pheromone] of p
+end
 
-to dessine
-  if mouse-down? [
-    ask patch mouse-xcor mouse-ycor [
-      ifelse (etat = 0) [
-        set etat 1
-        set pcolor white
-      ]
+to-report view-wall-at-angle [angle]
+  let p patch-right-and-ahead angle 1
+  if p = nobody [ report 0 ]
+  report [etat] of p
+end
+
+to go_to_most_higher
+  let view-ahead view_higher_at_angle   0
+  let view-right view_higher_at_angle  90
+  let view-left view_higher_at_angle -90
+  let view-back view_higher_at_angle  180
+
+  let ahead-etat view-wall-at-angle 0
+  let right-etat view-wall-at-angle 90
+  let left-etat view-wall-at-angle -90
+
+
+  ifelse (view-right > view-ahead) or (view-left > view-ahead)
+  [ ifelse view-right > view-left
+    [ if right-etat = 0
+      [ rt 90 ]]
+    [ if left-etat = 0
+      [ lt 90 ]]]
+  [
+    let dir 0
+    ifelse view-right = view-ahead[
+    set dir random 2
+    ifelse dir = 1 and right-etat = 0[
+     rt 90
+    ]
       [
-        ;set etat 0
-        ;set pcolor black
+       if left-etat = 0
+        [lt 90]
+      ]
+   ]
+   [ifelse view-left = view-ahead and left-etat = 0[
+      set dir random 2
+     ifelse dir = 1[
+      lt 90
+    ]
+      [
+      if right-etat = 0
+        [rt 90]
+      ]
+
+   ]
+   [
+        if view-left = view-ahead and view-right = view-ahead[
+          set dir random 3
+          if dir = 1[
+            ifelse left-etat = 1 [
+              set dir random 2
+              if dir = 1 and right-etat = 0[
+                rt 90
+              ]
+            ]
+            [lt 90]
+          ]
+          if dir = 2[
+            ifelse right-etat = 1 [
+              set dir random 2
+              if dir = 1 and left-etat = 0[
+                lt 90
+              ]
+            ]
+            [rt 90]
+          ]
+        ]
+
       ]
     ]
-  ]
+    if ahead-etat = 1
+    [ rt 180]]
 
 end
 
-to blank
-  ask patches [
-    set pcolor black
-  ]
+to-report view_higher_at_angle [angle]
+  let t patch-right-and-ahead angle 1
+  if t = nobody [ report 0 ]
+  report [idle] of t
 end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
-456
+210
 10
-1039
-594
+818
+619
 -1
 -1
-8.1
+30.0
 1
 10
 1
@@ -84,10 +265,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--35
-35
--35
-35
+-9
+10
+-9
+10
 0
 0
 1
@@ -95,12 +276,12 @@ ticks
 30.0
 
 BUTTON
-37
-27
-100
-60
+10
+12
+84
+45
+Setup
 setup
-setup
 NIL
 1
 T
@@ -112,12 +293,12 @@ NIL
 1
 
 BUTTON
-37
-73
-100
-106
-go
-go
+11
+49
+86
+85
+NIL
+go_evap
 T
 1
 T
@@ -128,108 +309,54 @@ NIL
 NIL
 1
 
-BUTTON
-37
-117
-100
-150
-step
-go
-NIL
+SLIDER
+9
+95
+181
+128
+evaporation
+evaporation
+0
+10
+0.4
+0.1
 1
-T
-OBSERVER
 NIL
-NIL
-NIL
-NIL
-1
+HORIZONTAL
 
-BUTTON
-37
+SLIDER
+9
+137
+181
+170
+NB_Agent
+NB_Agent
+0
+10
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+CHOOSER
+24
+206
 162
-108
-195
-dessine
-dessine
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-SLIDER
-38
-210
-210
-243
-nb_min_alive
-nb_min_alive
+251
+model
+model
+"EVAP" "CLinG"
 0
-8
-2.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-37
-259
-209
-292
-nb_max_alive
-nb_max_alive
-0
-8
-6.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-37
-307
-209
-340
-nb_max_spawn
-nb_max_spawn
-0
-8
-3.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-38
-352
-210
-385
-nb_min_spawn
-nb_min_spawn
-0
-8
-3.0
-1
-1
-NIL
-HORIZONTAL
 
 BUTTON
-199
-30
-262
-63
-blank
-blank
+93
+51
+173
+84
 NIL
+go_CLinG
+T
 1
 T
 OBSERVER
@@ -508,17 +635,6 @@ Circle -16777216 true false 30 30 240
 Circle -7500403 true true 60 60 180
 Circle -16777216 true false 90 90 120
 Circle -7500403 true true 120 120 60
-
-tortuninja
-true
-0
-Polygon -10899396 true false 215 204 240 233 246 254 228 266 215 252 193 210
-Polygon -10899396 true false 195 90 225 75 245 75 260 89 269 108 261 124 240 105 225 105 210 105
-Polygon -10899396 true false 105 90 75 75 55 75 40 89 31 108 39 124 60 105 75 105 90 105
-Polygon -10899396 true false 132 85 134 64 107 51 108 17 150 2 192 18 192 52 169 65 172 87
-Polygon -10899396 true false 85 204 60 233 54 254 72 266 85 252 107 210
-Polygon -7500403 true true 119 75 179 75 209 101 224 135 220 225 175 261 128 261 81 224 74 135 88 99
-Rectangle -2674135 true false 105 30 195 45
 
 tree
 false
