@@ -6,14 +6,14 @@ to setup
   ;; Changement de l'environnement
   resize-world -9 10 -9 10
   set-patch-size 30
-  import-pcolors "musé.png"
+  import-pcolors "muse.png"
 
   ;; Application de l'état de l'environnement (0 pour libre et 1 pour obstacle)
   ask patches[
+    set idle 0
     ifelse (pcolor = white)
     [set etat 0
     set pheromone 0
-    set idle 0
     ]
     [set etat 1
     set pheromone 1000]
@@ -25,7 +25,7 @@ to setup
   create-turtles NB_Agent [
     set color blue
     set size 1
-    set shape "person"
+    ;;set shape "person"
     ;;setxy 8 -8
     move-to one-of patches
 
@@ -58,9 +58,9 @@ end
 to go_CLinG
 
     ask turtles[
-      set idle 0
       go_to_most_higher
       forward 1
+      set idle 0
     ]
 
     ask patches[;; on augmente le idle de tout les patches de 1
@@ -68,18 +68,33 @@ to go_CLinG
       set idle idle + 1
      ]
     ]
-    ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins
+    ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins - coef
      if etat = 0 [
       set MaxIdle idle
+      let maximum 0
+      let malus 0
       ask neighbors[
-        if MaxIdle < idle
+
+        ifelse idle = 1
         [
-          set MaxIdle idle
+          set malus beta
         ]
+        [
+          set malus 0
+        ]
+
+        if maximum < (idle - coef - malus)
+        [
+          set maximum (idle - coef - malus)
+        ]
+      ]
+      if maximum > MaxIdle
+      [
+        set  MaxIdle maximum
       ]
     ]
     ]
-  ask patches[;; pur chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins
+  ask patches[;; pour chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins - coef
     if etat = 0 [
       set idle MaxIdle
       set pcolor rgb 255 (255 - idle) (255 - idle)
@@ -87,56 +102,7 @@ to go_CLinG
   ]
 end
 
-to go
-  ;; Déplacement des agents
-
-  ifelse model = "EVAP"
-  [
-    ask turtles[
-      set pheromone 100
-      uphill-pheromone
-      forward 1
-    ]
-
-  ;; Fonctionnement des phéromonnes
-  ask patches[
-    if etat = 0 [
-        if pheromone > 0 [
-          set pheromone pheromone - evaporation]
-        set pcolor rgb (255 - (pheromone * 2.5)) 255 (255 - (pheromone * 2.5))
-      ]
-    ]
-  ]
-  [
-  set idle 0
-    ask turtles[
-      go_to_most_higher
-      forward 1
-    ]
-
-    ask patches[;; on augmente le idle de tout les patches de 1
-      set idle idle + 1
-    ]
-    ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins
-
-      set MaxIdle idle
-      ask neighbors[
-       if MaxIdle < idle
-        [
-          set MaxIdle idle
-        ]
-      ]
-      ask patches[;; pur chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins
-        set idle MaxIdle
-        set pcolor rgb 255 (255 - idle) (255 - idle)
-      ]
-
-    ]
-
-  ]
-end
-
-to uphill-pheromone  ;; turtle procedure
+to uphill-pheromone  ;; fais tourner la tortue dans le sens ou il n'y a pas de mur et ou il ya le moins de pheromone
   let scent-ahead pheromone-scent-at-angle   0
   let scent-right pheromone-scent-at-angle  90
   let scent-left  pheromone-scent-at-angle -90
@@ -156,7 +122,36 @@ to uphill-pheromone  ;; turtle procedure
   [if ahead-etat = 1
     [ rt 180]]
 
+end
 
+to go_to_most_higher ;; fais tourner la tortue dans le sens ou il n'y a pas de mur et ou l'idle est la plus élevé
+  let scent-ahead view_higher_at_angle   0
+  let scent-right view_higher_at_angle  90
+  let scent-left  view_higher_at_angle -90
+  let scent-back view_higher_at_angle  180
+
+  let ahead-etat view-wall-at-angle 0
+  let right-etat view-wall-at-angle 90
+  let left-etat view-wall-at-angle -90
+
+
+  ifelse (scent-right > scent-ahead) or (scent-left > scent-ahead)
+  [ ifelse scent-right > scent-left
+    [ if right-etat = 0
+      [ rt 90 ]]
+    [ if left-etat = 0
+      [ lt 90 ]]]
+  [ifelse scent-right = scent-left[
+    let r random 2
+    ifelse r = 1[
+       rt 90
+    ]
+    [
+       lt 90
+    ]
+    ]
+    [if ahead-etat = 1
+      [ rt 180]]]
 end
 
 to-report pheromone-scent-at-angle [angle]
@@ -171,82 +166,12 @@ to-report view-wall-at-angle [angle]
   report [etat] of p
 end
 
-to go_to_most_higher
-  let view-ahead view_higher_at_angle   0
-  let view-right view_higher_at_angle  90
-  let view-left view_higher_at_angle -90
-  let view-back view_higher_at_angle  180
-
-  let ahead-etat view-wall-at-angle 0
-  let right-etat view-wall-at-angle 90
-  let left-etat view-wall-at-angle -90
-
-
-  ifelse (view-right > view-ahead) or (view-left > view-ahead)
-  [ ifelse view-right > view-left
-    [ if right-etat = 0
-      [ rt 90 ]]
-    [ if left-etat = 0
-      [ lt 90 ]]]
-  [
-    let dir 0
-    ifelse view-right = view-ahead[
-    set dir random 2
-    ifelse dir = 1 and right-etat = 0[
-     rt 90
-    ]
-      [
-       if left-etat = 0
-        [lt 90]
-      ]
-   ]
-   [ifelse view-left = view-ahead and left-etat = 0[
-      set dir random 2
-     ifelse dir = 1[
-      lt 90
-    ]
-      [
-      if right-etat = 0
-        [rt 90]
-      ]
-
-   ]
-   [
-        if view-left = view-ahead and view-right = view-ahead[
-          set dir random 3
-          if dir = 1[
-            ifelse left-etat = 1 [
-              set dir random 2
-              if dir = 1 and right-etat = 0[
-                rt 90
-              ]
-            ]
-            [lt 90]
-          ]
-          if dir = 2[
-            ifelse right-etat = 1 [
-              set dir random 2
-              if dir = 1 and left-etat = 0[
-                lt 90
-              ]
-            ]
-            [rt 90]
-          ]
-        ]
-
-      ]
-    ]
-    if ahead-etat = 1
-    [ rt 180]]
-
-end
 
 to-report view_higher_at_angle [angle]
   let t patch-right-and-ahead angle 1
   if t = nobody [ report 0 ]
   report [idle] of t
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -318,7 +243,7 @@ evaporation
 evaporation
 0
 10
-0.4
+2.0
 0.1
 1
 NIL
@@ -339,16 +264,6 @@ NB_Agent
 NIL
 HORIZONTAL
 
-CHOOSER
-24
-206
-162
-251
-model
-model
-"EVAP" "CLinG"
-0
-
 BUTTON
 93
 51
@@ -365,6 +280,36 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+11
+269
+183
+302
+coef
+coef
+0
+1000
+1000.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+11
+225
+183
+258
+beta
+beta
+0
+10
+5.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
