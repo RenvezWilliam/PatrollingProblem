@@ -103,55 +103,63 @@ to go_CLinG
 end
 
 to uphill-pheromone  ;; fais tourner la tortue dans le sens ou il n'y a pas de mur et ou il ya le moins de pheromone
-  let scent-ahead pheromone-scent-at-angle   0
-  let scent-right pheromone-scent-at-angle  90
-  let scent-left  pheromone-scent-at-angle -90
-  let scent-back pheromone-scent-at-angle  180
+  let Minimum 100
+  let dir 180
 
-  let ahead-etat view-wall-at-angle 0
-  let right-etat view-wall-at-angle 90
-  let left-etat view-wall-at-angle -90
-
-
-  ifelse (scent-right < scent-ahead) or (scent-left < scent-ahead)
-  [ ifelse scent-right < scent-left
-    [ if right-etat = 0
-      [ rt 90 ]]
-    [ if left-etat = 0
-      [ lt 90 ]]]
-  [if ahead-etat = 1
-    [ rt 180]]
+  foreach [0 180 90 270]
+  [
+    x ->
+    if view-wall-at-angle x = 0
+    [
+      ifelse pheromone-scent-at-angle   x < Minimum
+      [
+        set Minimum pheromone-scent-at-angle   x
+        set dir x
+      ]
+      [
+        if pheromone-scent-at-angle   x = Minimum ; si deux des patche on la même valeur on choisit aléatoirement, celat permet d'evité que plusieur tortu se regroupe et effectu éxactement les mêmes mouvement
+        [
+          let r random 2
+          if r = 1
+          [
+            set dir x
+          ]
+        ]
+      ]
+    ]
+  ]
+  rt dir
 
 end
 
 to go_to_most_higher ;; fais tourner la tortue dans le sens ou il n'y a pas de mur et ou l'idle est la plus élevé
-  let scent-ahead view_higher_at_angle   0
-  let scent-right view_higher_at_angle  90
-  let scent-left  view_higher_at_angle -90
-  let scent-back view_higher_at_angle  180
 
-  let ahead-etat view-wall-at-angle 0
-  let right-etat view-wall-at-angle 90
-  let left-etat view-wall-at-angle -90
+  let Maximum 0
+  let dir 180
 
-
-  ifelse (scent-right > scent-ahead) or (scent-left > scent-ahead)
-  [ ifelse scent-right > scent-left
-    [ if right-etat = 0
-      [ rt 90 ]]
-    [ if left-etat = 0
-      [ lt 90 ]]]
-  [ifelse scent-right = scent-left[
-    let r random 2
-    ifelse r = 1[
-       rt 90
-    ]
+  foreach [0 180 90 270]
+  [
+    x ->
+    if view-wall-at-angle x = 0
     [
-       lt 90
+      ifelse view_higher_at_angle   x > Maximum
+      [
+        set Maximum view_higher_at_angle   x
+        set dir x
+      ]
+      [
+        if view_higher_at_angle   x = Maximum ; si deux des patche on la même valeur on choisit aléatoirement, celat permet d'evité que plusieur tortu se regroupe et effectu éxactement les mêmes mouvement
+        [
+          let r random 2
+          if r = 1
+          [
+            set dir x
+          ]
+        ]
+      ]
     ]
-    ]
-    [if ahead-etat = 1
-      [ rt 180]]]
+  ]
+  rt dir
 end
 
 to-report pheromone-scent-at-angle [angle]
@@ -258,7 +266,7 @@ NB_Agent
 NB_Agent
 0
 10
-3.0
+5.0
 1
 1
 NIL
@@ -283,14 +291,14 @@ NIL
 
 SLIDER
 11
-269
+268
 183
-302
+301
 coef
 coef
 0
-1000
-1000.0
+300
+55.0
 1
 1
 NIL
@@ -305,7 +313,7 @@ beta
 beta
 0
 10
-5.0
+10.0
 1
 1
 NIL
