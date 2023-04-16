@@ -1,4 +1,4 @@
-globals []
+globals [maxi moy]
 patches-own [etat pheromone idle MaxIdle]
 turtles-own [northP southP eastP westP]
 
@@ -32,31 +32,48 @@ to setup
     while [pcolor = black]
     [
       uphill-pheromone
-      forward 1
+      move-to one-of patches
     ]
     set heading 0
   ]
 end
 
 to go_evap
+  set maxi 0
+  set moy 0
   ask turtles[
-      set pheromone 100
-      uphill-pheromone
-      forward 1
-    ]
+    set pheromone 100
+    uphill-pheromone
+    set idle 0
+    forward 1
+  ]
 
   ;; Fonctionnement des phéromonnes
   ask patches[
     if etat = 0 [
-        if pheromone > 0 [
+      set idle idle + 1
+
+      set moy moy + idle
+
+      if idle > maxi [
+        set maxi idle
+      ]
+
+      if pheromone > 0 [
           set pheromone pheromone - evaporation]
         set pcolor rgb (255 - (pheromone * 2.5)) 255 (255 - (pheromone * 2.5))
       ]
     ]
+
+  set moy moy / (count patches with [etat = 0])
+
+  update-plots
+
 end
 
 to go_CLinG
-
+  set maxi 0
+  set moy 0
     ask turtles[
       go_to_most_higher
       forward 1
@@ -64,9 +81,16 @@ to go_CLinG
     ]
 
     ask patches[;; on augmente le idle de tout les patches de 1
+
+     set moy moy + idle
      if etat = 0 [
       set idle idle + 1
      ]
+
+     if idle > maxi [
+        set maxi idle
+     ]
+
     ]
     ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins - coef
      if etat = 0 [
@@ -100,6 +124,10 @@ to go_CLinG
       set pcolor rgb 255 (255 - idle) (255 - idle)
     ]
   ]
+
+  set moy moy / (count patches with [etat = 0])
+
+  update-plots
 end
 
 to uphill-pheromone  ;; fais tourner la tortue dans le sens ou il n'y a pas de mur et ou il ya le moins de pheromone
@@ -298,7 +326,7 @@ coef
 coef
 0
 300
-55.0
+157.0
 1
 1
 NIL
@@ -318,6 +346,42 @@ beta
 1
 NIL
 HORIZONTAL
+
+PLOT
+936
+229
+1256
+379
+MaxIdle par rapport au Temps
+Temps (Tick)
+IdleMax
+0.0
+10000.0
+0.0
+1000.0
+false
+false
+"" ""
+PENS
+"default" 1.0 0 -14730904 true "" "plot maxi"
+
+PLOT
+936
+388
+1256
+538
+MoyIdle par rapport au temps
+Temps (Tick)
+MoyIdle
+0.0
+10000.0
+0.0
+200.0
+false
+false
+"" ""
+PENS
+"default" 1.0 0 -14730904 true "" "plot moy"
 
 @#$#@#$#@
 ## WHAT IS IT?
