@@ -4,9 +4,45 @@ turtles-own [northP southP eastP westP]
 
 to setup
   ;; Changement de l'environnement
-  resize-world -9 10 -9 10
-  set-patch-size 30
-  import-pcolors "muse.png"
+
+  clear-all-plots
+
+  if Carte = "Map A"
+  [
+    resize-world 0 21 0 21
+    set-patch-size 30
+    import-pcolors "Map A.png"
+  ]
+  if Carte = "Map B"
+  [
+    resize-world 0 21 0 21
+    set-patch-size 30
+    import-pcolors "Map B.png"
+  ]
+  if Carte = "Map C"
+  [
+    resize-world 0 21 0 21
+    set-patch-size 30
+    import-pcolors "Map C.png"
+  ]
+  if Carte = "Map D"
+  [
+    resize-world 0 21 0 26
+    set-patch-size 30
+    import-pcolors "Map D.png"
+  ]
+  if Carte = "Map E"
+  [
+    resize-world 0 29 0 18
+    set-patch-size 30
+    import-pcolors "Map E.png"
+  ]
+  if Carte = "musée"
+  [
+    resize-world -9 10 -9 10
+    set-patch-size 30
+    import-pcolors "muse.png"
+  ]
 
   ;; Application de l'état de l'environnement (0 pour libre et 1 pour obstacle)
   ask patches[
@@ -134,7 +170,7 @@ to uphill-pheromone  ;; fais tourner la tortue dans le sens ou il n'y a pas de m
   let Minimum 100
   let dir 180
 
-  foreach [0 180 90 270]
+  foreach [0 45 90 135 180 225 270 315]
   [
     x ->
     if view-wall-at-angle x = 0
@@ -165,7 +201,7 @@ to go_to_most_higher ;; fais tourner la tortue dans le sens ou il n'y a pas de m
   let Maximum 0
   let dir 180
 
-  foreach [0 180 90 270]
+  foreach [0 45 90 135 180 225 270 315]
   [
     x ->
     if view-wall-at-angle x = 0
@@ -212,8 +248,8 @@ end
 GRAPHICS-WINDOW
 210
 10
-818
-619
+878
+679
 -1
 -1
 30.0
@@ -226,10 +262,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--9
-10
--9
-10
+0
+21
+0
+21
 0
 0
 1
@@ -279,7 +315,7 @@ evaporation
 evaporation
 0
 10
-2.0
+1.0
 0.1
 1
 NIL
@@ -348,10 +384,10 @@ NIL
 HORIZONTAL
 
 PLOT
-936
-229
-1256
-379
+1130
+278
+1450
+428
 MaxIdle par rapport au Temps
 Temps (Tick)
 IdleMax
@@ -366,10 +402,10 @@ PENS
 "default" 1.0 0 -14730904 true "" "plot maxi"
 
 PLOT
-936
-388
-1256
-538
+1130
+437
+1450
+587
 MoyIdle par rapport au temps
 Temps (Tick)
 MoyIdle
@@ -382,6 +418,16 @@ false
 "" ""
 PENS
 "default" 1.0 0 -14730904 true "" "plot moy"
+
+CHOOSER
+13
+356
+151
+401
+Carte
+Carte
+"Map A" "Map B" "Map C" "Map D" "Map E" "Musée"
+2
 
 @#$#@#$#@
 ## WHAT IS IT?
