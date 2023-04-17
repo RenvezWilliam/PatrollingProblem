@@ -1,5 +1,5 @@
 globals [maxi moy]
-patches-own [etat pheromone idle MaxIdle]
+patches-own [etat pheromone idle MaxIdle idl Agent_in_neighbors]
 turtles-own [northP southP eastP westP]
 
 to setup
@@ -37,7 +37,7 @@ to setup
     set-patch-size 30
     import-pcolors "Map E.png"
   ]
-  if Carte = "musée"
+  if Carte = "Musée"
   [
     resize-world -9 10 -9 10
     set-patch-size 30
@@ -47,6 +47,7 @@ to setup
   ;; Application de l'état de l'environnement (0 pour libre et 1 pour obstacle)
   ask patches[
     set idle 0
+    set idl 0
     ifelse (pcolor = white)
     [set etat 0
     set pheromone 0
@@ -80,19 +81,19 @@ to go_evap
   ask turtles[
     set pheromone 100
     uphill-pheromone
-    set idle 0
+    set idl 0
     forward 1
   ]
 
   ;; Fonctionnement des phéromonnes
   ask patches[
     if etat = 0 [
-      set idle idle + 1
+      set idl idl + 1
 
       set moy moy + idle
 
-      if idle > maxi [
-        set maxi idle
+      if idl > maxi [
+        set maxi idl
       ]
 
       if pheromone > 0 [
@@ -114,38 +115,38 @@ to go_CLinG
       go_to_most_higher
       forward 1
       set idle 0
+    set idl 0
     ]
 
     ask patches[;; on augmente le idle de tout les patches de 1
 
-     set moy moy + idle
+     set moy moy + idl
      if etat = 0 [
       set idle idle + 1
+      set idl idl + 1
      ]
 
-     if idle > maxi [
-        set maxi idle
+     if idl > maxi [
+        set maxi idl
+
      ]
 
     ]
     ask patches[;; pour chaque patche on selectionne l'idle le plus grand entre le sien et celuit de ses voisins - coef
      if etat = 0 [
       set MaxIdle idle
+      set Agent_in_neighbors 0
       let maximum 0
-      let malus 0
       ask neighbors[
 
-        ifelse idle = 1
+        if idle = 0
         [
-          set malus beta
-        ]
-        [
-          set malus 0
+          set Agent_in_neighbors 1
         ]
 
-        if maximum < (idle - coef - malus)
+        if maximum < (idle - coef)
         [
-          set maximum (idle - coef - malus)
+          set maximum (idle - coef)
         ]
       ]
       if maximum > MaxIdle
@@ -156,7 +157,7 @@ to go_CLinG
     ]
   ask patches[;; pour chaque patche sont idle prend la valeur du plus grand idle entre le sien et celuit de ses voisins - coef
     if etat = 0 [
-      set idle MaxIdle
+      set idle MaxIdle - (beta * Agent_in_neighbors)
       set pcolor rgb 255 (255 - idle) (255 - idle)
     ]
   ]
@@ -315,7 +316,7 @@ evaporation
 evaporation
 0
 10
-1.0
+0.6
 0.1
 1
 NIL
@@ -362,7 +363,7 @@ coef
 coef
 0
 300
-157.0
+80.0
 1
 1
 NIL
@@ -377,7 +378,7 @@ beta
 beta
 0
 10
-10.0
+0.0
 1
 1
 NIL
@@ -427,7 +428,7 @@ CHOOSER
 Carte
 Carte
 "Map A" "Map B" "Map C" "Map D" "Map E" "Musée"
-2
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
